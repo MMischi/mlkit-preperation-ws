@@ -1,8 +1,8 @@
 package com.example.ml_kit
 
-import android.content.ContentValues.TAG
+import android.content.Intent
+import android.net.Uri
 import android.os.Bundle
-import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -12,12 +12,14 @@ import android.widget.TextView
 import androidx.fragment.app.Fragment
 import com.google.mlkit.nl.entityextraction.*
 
+
 class Chatbot : Fragment(), View.OnClickListener {
 
     private lateinit var rootView: View
     private lateinit var submitButton: Button
     private lateinit var msgHistory: TextView
-    private lateinit var outputText: String
+
+    private var outputText: String = ""
 
     // needed for entityExtractor
     private lateinit var entityExtractor: EntityExtractor
@@ -42,20 +44,20 @@ class Chatbot : Fragment(), View.OnClickListener {
         // 1. get inserted text
         var textInput: String = getInsertedText(rootView)
         if (textInput == "no input") {
-            msgHistory.text = msgHistory.text.toString() + "\n" + "How  can I help you?"
+            msgHistory.text = msgHistory.text.toString() + "\nChatbot: How  can I help you?"
             return
+        } else {
+            msgHistory.text = msgHistory.text.toString() + "\nYou: $textInput"
         }
 
         // 2. EntityExtractor
         entityExtractor(textInput)
-
-        msgHistory.text = msgHistory.text.toString() + "\n" +  textInput
     }
 
     /**
      * getInsertedText
      *      Input-val:  v:View = Chatbot-View
-     *      Output-Val: text:String = contains input of EditText-View
+     *      Output-val: text:String = contains input of EditText-View
      *                  returns "no input" at no user input
      *
      * Reads text from the input field and returns its content
@@ -71,6 +73,12 @@ class Chatbot : Fragment(), View.OnClickListener {
         return text
     }
 
+    /**
+     * entityExtractor
+     *      Input-val: input:String = (user) input
+     *
+     * First make ensure that ee-model is downloaded before extract entities.
+     */
     private fun entityExtractor(input: String) {
         createEntityExtractor()
 
@@ -88,6 +96,11 @@ class Chatbot : Fragment(), View.OnClickListener {
             }
     }
 
+    /**
+     * createEntityExtractor
+     *
+     * We need an EntityExtractor object for extracting later.
+     */
     private fun createEntityExtractor() {
         entityExtractor =
             EntityExtraction.getClient(
@@ -95,6 +108,13 @@ class Chatbot : Fragment(), View.OnClickListener {
             )
     }
 
+    /**
+     * extractEntities
+     *      Input-val: input:String = (user) input
+     *
+     * Now we can try to extract entities.First we check if the input-text contains entities,
+     * if not SmartReply is called. If entities are contained, they are handled further.
+     */
     private fun extractEntities(input: String) {
         // create params object
         val params = getEntityParams(input)
@@ -118,6 +138,12 @@ class Chatbot : Fragment(), View.OnClickListener {
             }
     }
 
+    /**
+     * getEntityParams
+     *      Input-val: input:String = (user) input
+     *
+     * To execute entities we have to convert the input text
+     */
     private fun getEntityParams(input: String): EntityExtractionParams {
         return EntityExtractionParams.Builder(input).build()
 
@@ -131,6 +157,13 @@ class Chatbot : Fragment(), View.OnClickListener {
          */
     }
 
+    /**
+     * handleEntity
+     *      Input-val: entityAnnotations:List<EntityAnnotation> = entities which are contained
+     *          in the user input
+     *
+     * In this method, the individual entities are processed.
+     */
     private fun handleEntity(entityAnnotations: List<EntityAnnotation>) {
         for (entityAnnotation in entityAnnotations) {
 
@@ -138,31 +171,88 @@ class Chatbot : Fragment(), View.OnClickListener {
             val annotatedText = entityAnnotation.annotatedText
 
             for (entity in entities) {
-                // TODO: make prettier output displayEntityInfo
-                displayEntityInfo(annotatedText, entity)
+                createEntityText(annotatedText, entity)
             }
         }
     }
 
-    private fun displayEntityInfo(annotatedText: String, entity: Entity) {
-        when (entity) {
-            is DateTimeEntity -> {
-                Log.d(TAG, "Granularity: ${entity.dateTimeGranularity}")
-                Log.d(TAG, "TimeStamp: ${entity.timestampMillis}")
-            }
-            is FlightNumberEntity -> {
-                Log.d(TAG, "Airline Code: ${entity.airlineCode}")
-                Log.d(TAG, "Flight number: ${entity.flightNumber}")
-            }
-            is MoneyEntity -> {
-                Log.d(TAG, "Currency: ${entity.unnormalizedCurrency}")
-                Log.d(TAG, "Integer part: ${entity.integerPart}")
-                Log.d(TAG, "Fractional Part: ${entity.fractionalPart}")
-            }
-            else -> {
-                Log.d(TAG, "  $entity")
-            }
+    /**
+     * createEntityText
+     *      Input-val:  annotatedText:String = Text passage containing the entity
+     *                  entity: Entity = contains entity type-id
+     *
+     * The entity's text is passed into the appropriate method, which produces the chatbot's output.
+     */
+    private fun createEntityText(annotatedText: String, entity: Entity) {
+        when (entity.type) {
+            Entity.TYPE_URL -> displayUrlInfo(annotatedText)
+            Entity.TYPE_PHONE -> displayPhoneInfo(annotatedText)
+            Entity.TYPE_EMAIL -> displayEmailInfo(annotatedText)
+            Entity.TYPE_ADDRESS -> displayAddressInfo(annotatedText)
+            else -> displayDefaultInfo(annotatedText, entity)
+
+            /*
+             * further entities
+             * Entity.TYPE_FLIGHT_NUMBER -> displayFlightNoInfo(entity, annotatedText)
+             * Entity.TYPE_IBAN -> displayIbanInfo(entity, annotatedText)
+             * Entity.TYPE_ISBN -> displayIsbnInfo(entity, annotatedText)
+             * Entity.TYPE_MONEY -> displayMoneyEntityInfo(entity, annotatedText)
+             * Entity.TYPE_PAYMENT_CARD -> displayPaymentCardInfo(entity, annotatedText)
+             * Entity.TYPE_TRACKING_NUMBER -> displayTrackingNoInfo(entity, annotatedText)
+             * Entity.TYPE_DATE_TIME -> displayDateTimeInfo(entity)
+             */
         }
+    }
+    private fun displayDefaultInfo(annotatedText: String, entity: Entity) {
+        var type: String = when (entity.type) {
+            Entity.TYPE_FLIGHT_NUMBER -> "flight number"
+            Entity.TYPE_IBAN -> "iban"
+            Entity.TYPE_ISBN -> "isbn"
+            Entity.TYPE_MONEY -> "money"
+            Entity.TYPE_PAYMENT_CARD -> "payment card"
+            Entity.TYPE_TRACKING_NUMBER -> "tracking number"
+            Entity.TYPE_DATE_TIME -> "date/time"
+            else -> "don't know"
+        }
+
+        outputText = "Chatbot: Entity ($type) detected here: $annotatedText"
+        msgHistory.text = msgHistory.text.toString() + "\n$outputText"
+    }
+    private fun displayAddressInfo(annotatedText: String) {
+        outputText = "Chatbot: I open map client with address: $annotatedText"
+        msgHistory.text = msgHistory.text.toString() + "\n$outputText"
+
+        val uri = "http://maps.google.co.in/maps?q=$annotatedText"
+        val intent = Intent(Intent.ACTION_VIEW, Uri.parse(uri))
+        startActivity(intent)
+    }
+    private fun displayEmailInfo(annotatedText: String) {
+        outputText = "Chatbot: I open mail client. Mail to:  $annotatedText"
+        msgHistory.text = msgHistory.text.toString() + "\n$outputText"
+
+        val intent = Intent(Intent.ACTION_SEND)
+        intent.type = "plain/text"
+        intent.putExtra(Intent.EXTRA_EMAIL, arrayOf(annotatedText))
+        startActivity(Intent.createChooser(intent, ""))
+    }
+    private fun displayPhoneInfo(annotatedText: String) {
+        outputText = "Chatbot: I open phone with number: $annotatedText"
+        msgHistory.text = msgHistory.text.toString() + "\n$outputText"
+
+        val intent = Intent(Intent.ACTION_DIAL)
+        intent.data = Uri.parse("tel:$annotatedText")
+        startActivity(intent)
+    }
+    private fun displayUrlInfo(annotatedText: String) {
+        var url = annotatedText
+        if (!url.startsWith("http://") && !url.startsWith("https://"))
+            url = "http://$url"
+
+        outputText = "Chatbot: I open the link: $url"
+        msgHistory.text = msgHistory.text.toString() + "\n$outputText"
+
+        val browserIntent = Intent(Intent.ACTION_VIEW, Uri.parse(url))
+        startActivity(browserIntent)
     }
 }
 

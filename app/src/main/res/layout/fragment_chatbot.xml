@@ -14,15 +14,16 @@
         android:padding="10dp" >
 
         <TextView
+            android:id="@+id/chatbot_msgHistory"
             android:layout_width="match_parent"
+
             android:layout_height="wrap_content"
-
             android:layout_margin="10dp"
-            android:text="How can I help you today?"
-            android:textSize="16sp"
+            android:lineSpacingExtra="10sp"
 
+            android:text="Chatbot: How can I help you today?"
             android:textColor="@color/black"
-            android:id="@+id/chatbot_msgHistory" />
+            android:textSize="16sp" />
 
         <TextView
             android:layout_width="match_parent"
