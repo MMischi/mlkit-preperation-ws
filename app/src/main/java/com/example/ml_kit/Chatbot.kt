@@ -17,6 +17,10 @@ class Chatbot : Fragment(), View.OnClickListener {
     private lateinit var rootView: View
     private lateinit var submitButton: Button
     private lateinit var msgHistory: TextView
+    private lateinit var outputText: String
+
+    // needed for entityExtractor
+    private lateinit var entityExtractor: EntityExtractor
 
 
     override fun onCreateView(
@@ -42,6 +46,9 @@ class Chatbot : Fragment(), View.OnClickListener {
             return
         }
 
+        // 2. EntityExtractor
+        entityExtractor(textInput)
+
         msgHistory.text = msgHistory.text.toString() + "\n" +  textInput
     }
 
@@ -65,4 +72,99 @@ class Chatbot : Fragment(), View.OnClickListener {
     }
 
     private fun entityExtractor(input: String) {
+        createEntityExtractor()
+
+        // Ensure that the ee-model is downloaded
+        entityExtractor
+            .downloadModelIfNeeded()
+            .addOnSuccessListener { _ ->
+                /* Model download succeed */
+                // call ee-api
+                extractEntities(input)
+            }
+            .addOnFailureListener { _ ->
+                /* Model download failed */
+                outputText = "Something went wrong"
+            }
+    }
+
+    private fun createEntityExtractor() {
+        entityExtractor =
+            EntityExtraction.getClient(
+                EntityExtractorOptions.Builder(EntityExtractorOptions.ENGLISH).build()
+            )
+    }
+
+    private fun extractEntities(input: String) {
+        // create params object
+        val params = getEntityParams(input)
+
+        // extract information of params
+        entityExtractor
+            .annotate(params)
+            .addOnSuccessListener { entityAnnotations: List<EntityAnnotation> ->
+                /* Annotation successful */
+                if (entityAnnotations.isEmpty()) {
+                    println("No entity detected!")
+                    // TODO: react with SmartReplay
+                } else {
+                    handleEntity(entityAnnotations)
+                    println("finished entity extraction \n \n")
+                }
+            }
+            .addOnFailureListener {
+                /* Annotation failed */
+                println("Annotation failed!")
+            }
+    }
+
+    private fun getEntityParams(input: String): EntityExtractionParams {
+        return EntityExtractionParams.Builder(input).build()
+
+        /*
+         * specify params:
+         *      .setEntityTypesFilter((/* optional entity type filter */)
+         *      .setPreferredLocale(/* optional preferred locale */)
+         *      .setReferenceTime(/* optional reference date-time */)
+         *      .setReferenceTimeZone(/* optional reference timezone */)
+         *
+         */
+    }
+
+    private fun handleEntity(entityAnnotations: List<EntityAnnotation>) {
+        for (entityAnnotation in entityAnnotations) {
+
+            val entities = entityAnnotation.entities
+            val annotatedText = entityAnnotation.annotatedText
+
+            for (entity in entities) {
+                // TODO: make prettier output displayEntityInfo
+                displayEntityInfo(annotatedText, entity)
+            }
+        }
+    }
+
+    private fun displayEntityInfo(annotatedText: String, entity: Entity) {
+        when (entity) {
+            is DateTimeEntity -> {
+                Log.d(TAG, "Granularity: ${entity.dateTimeGranularity}")
+                Log.d(TAG, "TimeStamp: ${entity.timestampMillis}")
+            }
+            is FlightNumberEntity -> {
+                Log.d(TAG, "Airline Code: ${entity.airlineCode}")
+                Log.d(TAG, "Flight number: ${entity.flightNumber}")
+            }
+            is MoneyEntity -> {
+                Log.d(TAG, "Currency: ${entity.unnormalizedCurrency}")
+                Log.d(TAG, "Integer part: ${entity.integerPart}")
+                Log.d(TAG, "Fractional Part: ${entity.fractionalPart}")
+            }
+            else -> {
+                Log.d(TAG, "  $entity")
+            }
+        }
+    }
+}
+
+
 
