@@ -63,16 +63,19 @@ class Chatbot : Fragment(), View.OnClickListener {
             msgHistory.text = msgHistory.text.toString() + "\nYou: $textInput"
         }
 
-        handleInput(textInput)
+        handleInputDownloadEE(textInput)
     }
 
+    // ============================================================================================
+    // Main helper-function
+    // ============================================================================================
     /**
      * getInsertedText
      *      Input-val:  v:View = Chatbot-View
      *      Output-val: text:String = contains input of EditText-View
      *                  returns "no input" at no user input
      *
-     * Reads text from the input field and returns its content
+     * Reads text from the input field and returns its content.
      */
     private fun getInsertedText(v: View): String {
         var textInputElem: EditText = v.findViewById(R.id.chatbot_enterMessage)
@@ -86,48 +89,53 @@ class Chatbot : Fragment(), View.OnClickListener {
     }
 
     /**
-     * entityExtractor
+     * handleInput_downloadEE
      *      Input-val: input:String = (user) input
      *
-     * First make ensure that ee-model is downloaded before extract entities.
+     * In this method the EE-model will be downloaded. We need this to be able filtering
+     * possible entities from the user input. If the download fails, an appropriate message
+     * will be displayed.
      */
-    private fun handleInput(input: String) {
-        createEntityExtractor()
+    private fun handleInputDownloadEE(input: String) {
+        // creates the EntityExtractor, which we need for entity detection
+        entityExtractor =
+            EntityExtraction.getClient(
+                EntityExtractorOptions.Builder(EntityExtractorOptions.ENGLISH).build()
+            )
 
         // Ensure that the ee-model is downloaded
         entityExtractor
             .downloadModelIfNeeded()
             .addOnSuccessListener { _ ->
                 /* Model download succeed */
-                // call ee-api
-                extractEntities(input)
+
+                // try extracting entities of input
+                tryExtractEntities(input)
             }
             .addOnFailureListener { _ ->
                 /* Model download failed */
-                outputText = "Something went wrong"
+                msgHistory.text =
+                    msgHistory.text.toString() + "\nChatbot: Sorry something went wrong!"
             }
     }
 
-    /**
-     * createEntityExtractor
-     *
-     * We need an EntityExtractor object for extracting later.
-     */
-    private fun createEntityExtractor() {
-        entityExtractor =
-            EntityExtraction.getClient(
-                EntityExtractorOptions.Builder(EntityExtractorOptions.ENGLISH).build()
-            )
-    }
+// ================================================================================================
+// ================================================================================================
+    // ============================================================================================
+    // Entity Extraction
+    // ============================================================================================
 
     /**
-     * extractEntities
+     * tryExtractEntities
      *      Input-val: input:String = (user) input
      *
-     * Now we can try to extract entities.First we check if the input-text contains entities,
-     * if not SmartReply is called. If entities are contained, they are handled further.
+     * This method tries to extract entities from the user input. The following cases may
+     * occur here:
+     *      a) If the text cannot be processed, a suitable message is output.
+     *      b.a) If NO entities are detected, the user input is passed to SmartReply.
+     *      b.b) If entities are found, they can be processed further.
      */
-    private fun extractEntities(input: String) {
+    private fun tryExtractEntities(input: String) {
         // create params object
         val params = getEntityParams(input)
 
@@ -137,136 +145,74 @@ class Chatbot : Fragment(), View.OnClickListener {
             .addOnSuccessListener { entityAnnotations: List<EntityAnnotation> ->
                 /* Annotation successful */
                 if (entityAnnotations.isEmpty()) {
-                    println("No entity detected!")
-
                     // smartReply if no entity detected
                     smartReply(input)
                 } else {
-                    handleEntity(entityAnnotations)
-                    println("finished entity extraction \n \n")
+                    // one or more entities detected
+                    handleEntities(entityAnnotations)
                 }
             }
-            .addOnFailureListener {
+            .addOnFailureListener { _ ->
                 /* Annotation failed */
-                println("Annotation failed!")
+                msgHistory.text =
+                    msgHistory.text.toString() + "\nChatbot: Annotation (EE) failed"
             }
     }
-
-    /** TODO: Documentation
-     *
-     */
-    private fun smartReply(input: String) {
-        addMessageToHistory(input)
-
-        // import SmartReplyGenerator
-        smartReplyGenerator = SmartReply.getClient()
-        smartReplyGenerator.suggestReplies(conversation)
-            .addOnSuccessListener { result ->
-                handleSuggestions(result)
-            }
-            .addOnFailureListener {
-                println("No output")
-            }
-    }
-
-    /**
-     * handleSuggestions
-     *      Input-val: result:SmartReplySuggestionResult = generated suggestions of smart reply
-     *
-     * Creates output of suggestions.
-     */
-    private fun handleSuggestions(result: SmartReplySuggestionResult) {
-        if (result.status == SmartReplySuggestionResult.STATUS_NOT_SUPPORTED_LANGUAGE) {
-            println("it's not working")
-        } else if (result.status == SmartReplySuggestionResult.STATUS_SUCCESS) {
-            msgSuggestions.text = "Suggestions:"
-            for (suggestion in result.suggestions) {
-                msgSuggestions.text =
-                    msgSuggestions.text.toString() + "\n${suggestion.text}"
-            }
-
-            msgHistory.text =
-                msgHistory.text.toString() + "\nChatbot: ${result.suggestions[0].text}"
-        }
-    }
-
-
-    /**
-     * addMessageToHistory
-     *      Input-val: input:String = (user) input
-     *
-     * Add user message to a history (List Array). This is used to generate context based
-     * smart reply suggestions later.
-     */
-    private fun addMessageToHistory(input: String) {
-        conversation.add(TextMessage.createForRemoteUser
-            (input, System.currentTimeMillis(), userId))
-    }
-
 
     /**
      * getEntityParams
      *      Input-val: input:String = (user) input
      *
-     * To execute entities we have to convert the input text
+     * To extract entities we have to convert the input text
      */
     private fun getEntityParams(input: String): EntityExtractionParams {
         return EntityExtractionParams.Builder(input).build()
 
         /*
          * specify params:
-         *      .setEntityTypesFilter((/* optional entity type filter */)
-         *      .setPreferredLocale(/* optional preferred locale */)
-         *      .setReferenceTime(/* optional reference date-time */)
-         *      .setReferenceTimeZone(/* optional reference timezone */)
+         *      .setEntityTypesFilter(optional entity type filter)
+         *          A set must be passed eg: var typesSet: Set<Int> = setOf(1) // 1 = address
+         *          List of Entity-Types:
+         *              https://developers.google.com/android/reference/com/google/mlkit/nl/entityextraction/Entity#TYPE_ADDRESS
+         *      .setPreferredLocale(optional preferred locale)
+         *      .setReferenceTime(optional reference date-time)
+         *      .setReferenceTimeZone(optional reference timezone)
          *
          */
     }
 
     /**
-     * handleEntity
-     *      Input-val: entityAnnotations:List<EntityAnnotation> = entities which are contained
-     *          in the user input
+     * handleEntities
+     *      Input-val: entityAnnotations:List<EntityAnnotation> = List of entities
+     *          which are contained in the user input
      *
-     * In this method, the individual entities are processed.
+     * In this method, over all entities is iterated. It determines which entity it is and routes
+     * it to the suitable display-method (these are listed afterwards, but were not commented on).
      */
-    private fun handleEntity(entityAnnotations: List<EntityAnnotation>) {
+    private fun handleEntities(entityAnnotations: List<EntityAnnotation>) {
         for (entityAnnotation in entityAnnotations) {
-
             val entities = entityAnnotation.entities
             val annotatedText = entityAnnotation.annotatedText
 
             for (entity in entities) {
-                createEntityText(annotatedText, entity)
+                when (entity.type) {
+                    Entity.TYPE_URL -> displayUrlInfo(annotatedText)
+                    Entity.TYPE_PHONE -> displayPhoneInfo(annotatedText)
+                    Entity.TYPE_EMAIL -> displayEmailInfo(annotatedText)
+                    Entity.TYPE_ADDRESS -> displayAddressInfo(annotatedText)
+                    /*
+                     * further entity types:
+                     * Entity.TYPE_DATE_TIME -> displayDateTimeInfo(entity)
+                     * Entity.TYPE_IBAN -> displayIbanInfo(entity, annotatedText)
+                     * Entity.TYPE_ISBN -> displayIsbnInfo(entity, annotatedText)
+                     * Entity.TYPE_MONEY -> displayMoneyEntityInfo(entity, annotatedText)
+                     * Entity.TYPE_FLIGHT_NUMBER -> displayFlightNoInfo(entity, annotatedText)
+                     * Entity.TYPE_PAYMENT_CARD -> displayPaymentCardInfo(entity, annotatedText)
+                     * Entity.TYPE_TRACKING_NUMBER -> displayTrackingNoInfo(entity, annotatedText)
+                     */
+                    else -> displayDefaultInfo(annotatedText, entity)
+                }
             }
-        }
-    }
-
-    /**
-     * createEntityText
-     *      Input-val:  annotatedText:String = Text passage containing the entity
-     *                  entity: Entity = contains entity type-id
-     *
-     * The entity's text is passed into the appropriate method, which produces the chatbot's output.
-     */
-    private fun createEntityText(annotatedText: String, entity: Entity) {
-        when (entity.type) {
-            Entity.TYPE_URL -> displayUrlInfo(annotatedText)
-            Entity.TYPE_PHONE -> displayPhoneInfo(annotatedText)
-            Entity.TYPE_EMAIL -> displayEmailInfo(annotatedText)
-            Entity.TYPE_ADDRESS -> displayAddressInfo(annotatedText)
-            else -> displayDefaultInfo(annotatedText, entity)
-
-            /*
-             * further entities
-             * Entity.TYPE_FLIGHT_NUMBER -> displayFlightNoInfo(entity, annotatedText)
-             * Entity.TYPE_IBAN -> displayIbanInfo(entity, annotatedText)
-             * Entity.TYPE_ISBN -> displayIsbnInfo(entity, annotatedText)
-             * Entity.TYPE_MONEY -> displayMoneyEntityInfo(entity, annotatedText)
-             * Entity.TYPE_PAYMENT_CARD -> displayPaymentCardInfo(entity, annotatedText)
-             * Entity.TYPE_TRACKING_NUMBER -> displayTrackingNoInfo(entity, annotatedText)
-             * Entity.TYPE_DATE_TIME -> displayDateTimeInfo(entity)
-             */
         }
     }
     private fun displayDefaultInfo(annotatedText: String, entity: Entity) {
@@ -319,6 +265,67 @@ class Chatbot : Fragment(), View.OnClickListener {
 
         val browserIntent = Intent(Intent.ACTION_VIEW, Uri.parse(url))
         startActivity(browserIntent)
+    }
+
+// ================================================================================================
+// ================================================================================================
+    // ============================================================================================
+    // SmartReply
+    // ============================================================================================
+
+    /**
+     * smartReply
+     *      Input-val: input:String = (user) input
+     *
+     * This method forms the structure of the SmartReplay.
+     *      1. first the user input is added to a history to generate later
+     *          content-based suggestions
+     *      2. the SmartReplayGenerator is imported to be able to use it
+     *      3. suggestions are generated on the given message
+     */
+    private fun smartReply(input: String) {
+        // add input to history, to generate content based suggestion
+        conversation.add(TextMessage.createForRemoteUser
+            (input, System.currentTimeMillis(), userId))
+
+        // import SmartReplyGenerator
+        smartReplyGenerator = SmartReply.getClient()
+
+        // create suggestions
+        smartReplyGenerator.suggestReplies(conversation)
+            .addOnSuccessListener { result ->
+                handleSuggestions(result)
+            }
+            .addOnFailureListener {
+                msgHistory.text =
+                    msgHistory.text.toString() + "\nChatbot: generating suggestions failed (SR)"
+            }
+    }
+
+    /**
+     * handleSuggestions
+     *      Input-val: result:SmartReplySuggestionResult = generated suggestions of smart reply
+     *
+     * This method generates the display of the suggestions to the message from SmartReplay. It
+     * also adds the first suggestion to the chat history.
+     */
+    private fun handleSuggestions(result: SmartReplySuggestionResult) {
+        if (result.status == SmartReplySuggestionResult.STATUS_NOT_SUPPORTED_LANGUAGE) {
+            msgHistory.text =
+                msgHistory.text.toString() + "\nChatbot: SR not working (not_supported_language)"
+        }
+
+        else if (result.status == SmartReplySuggestionResult.STATUS_SUCCESS) {
+            // add suggestions to extra suggestions box
+            msgSuggestions.text = "Suggestions:"
+            for (suggestion in result.suggestions) {
+                msgSuggestions.text =
+                    msgSuggestions.text.toString() + "\n${suggestion.text}"
+            }
+            // only one suggestion will be added to output
+            msgHistory.text =
+                msgHistory.text.toString() + "\nChatbot: ${result.suggestions[0].text}"
+        }
     }
 }
 
