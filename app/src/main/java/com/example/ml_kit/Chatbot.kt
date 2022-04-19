@@ -10,7 +10,13 @@ import android.widget.Button
 import android.widget.EditText
 import android.widget.TextView
 import androidx.fragment.app.Fragment
+
 import com.google.mlkit.nl.entityextraction.*
+
+import com.google.mlkit.nl.smartreply.SmartReply
+import com.google.mlkit.nl.smartreply.SmartReplyGenerator
+import com.google.mlkit.nl.smartreply.SmartReplySuggestionResult
+import com.google.mlkit.nl.smartreply.TextMessage
 
 
 class Chatbot : Fragment(), View.OnClickListener {
@@ -18,11 +24,17 @@ class Chatbot : Fragment(), View.OnClickListener {
     private lateinit var rootView: View
     private lateinit var submitButton: Button
     private lateinit var msgHistory: TextView
+    private lateinit var msgSuggestions: TextView
 
     private var outputText: String = ""
 
     // needed for entityExtractor
     private lateinit var entityExtractor: EntityExtractor
+
+    // needed for smartReply
+    private lateinit var smartReplyGenerator: SmartReplyGenerator
+    private var conversation: ArrayList<TextMessage> = ArrayList()
+    private var userId: String = "user_1234" // should be replaced by real user id
 
 
     override fun onCreateView(
@@ -30,6 +42,9 @@ class Chatbot : Fragment(), View.OnClickListener {
         savedInstanceState: Bundle?
     ): View? {
         var view = inflater.inflate(R.layout.fragment_chatbot, container, false)
+
+        msgHistory = view.findViewById(R.id.chatbot_msgHistory)
+        msgSuggestions = view.findViewById(R.id.chatbot_suggestedReply)
 
         submitButton = view.findViewById(R.id.chatbot_submit)
         submitButton.setOnClickListener(this)
@@ -39,9 +54,7 @@ class Chatbot : Fragment(), View.OnClickListener {
 
     override fun onClick(v: View) {
         rootView = v.rootView
-        msgHistory = rootView.findViewById(R.id.chatbot_msgHistory)
 
-        // 1. get inserted text
         var textInput: String = getInsertedText(rootView)
         if (textInput == "no input") {
             msgHistory.text = msgHistory.text.toString() + "\nChatbot: How  can I help you?"
@@ -50,8 +63,7 @@ class Chatbot : Fragment(), View.OnClickListener {
             msgHistory.text = msgHistory.text.toString() + "\nYou: $textInput"
         }
 
-        // 2. EntityExtractor
-        entityExtractor(textInput)
+        handleInput(textInput)
     }
 
     /**
@@ -79,7 +91,7 @@ class Chatbot : Fragment(), View.OnClickListener {
      *
      * First make ensure that ee-model is downloaded before extract entities.
      */
-    private fun entityExtractor(input: String) {
+    private fun handleInput(input: String) {
         createEntityExtractor()
 
         // Ensure that the ee-model is downloaded
@@ -126,7 +138,9 @@ class Chatbot : Fragment(), View.OnClickListener {
                 /* Annotation successful */
                 if (entityAnnotations.isEmpty()) {
                     println("No entity detected!")
-                    // TODO: react with SmartReplay
+
+                    // smartReply if no entity detected
+                    smartReply(input)
                 } else {
                     handleEntity(entityAnnotations)
                     println("finished entity extraction \n \n")
@@ -137,6 +151,58 @@ class Chatbot : Fragment(), View.OnClickListener {
                 println("Annotation failed!")
             }
     }
+
+    /** TODO: Documentation
+     *
+     */
+    private fun smartReply(input: String) {
+        addMessageToHistory(input)
+
+        // import SmartReplyGenerator
+        smartReplyGenerator = SmartReply.getClient()
+        smartReplyGenerator.suggestReplies(conversation)
+            .addOnSuccessListener { result ->
+                handleSuggestions(result)
+            }
+            .addOnFailureListener {
+                println("No output")
+            }
+    }
+
+    /**
+     * handleSuggestions
+     *      Input-val: result:SmartReplySuggestionResult = generated suggestions of smart reply
+     *
+     * Creates output of suggestions.
+     */
+    private fun handleSuggestions(result: SmartReplySuggestionResult) {
+        if (result.status == SmartReplySuggestionResult.STATUS_NOT_SUPPORTED_LANGUAGE) {
+            println("it's not working")
+        } else if (result.status == SmartReplySuggestionResult.STATUS_SUCCESS) {
+            msgSuggestions.text = "Suggestions:"
+            for (suggestion in result.suggestions) {
+                msgSuggestions.text =
+                    msgSuggestions.text.toString() + "\n${suggestion.text}"
+            }
+
+            msgHistory.text =
+                msgHistory.text.toString() + "\nChatbot: ${result.suggestions[0].text}"
+        }
+    }
+
+
+    /**
+     * addMessageToHistory
+     *      Input-val: input:String = (user) input
+     *
+     * Add user message to a history (List Array). This is used to generate context based
+     * smart reply suggestions later.
+     */
+    private fun addMessageToHistory(input: String) {
+        conversation.add(TextMessage.createForRemoteUser
+            (input, System.currentTimeMillis(), userId))
+    }
+
 
     /**
      * getEntityParams
