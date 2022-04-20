@@ -42,6 +42,7 @@ class Chatbot : Fragment(), View.OnClickListener {
         savedInstanceState: Bundle?
     ): View? {
         var view = inflater.inflate(R.layout.fragment_chatbot, container, false)
+        rootView = view
 
         msgHistory = view.findViewById(R.id.chatbot_msgHistory)
         msgSuggestions = view.findViewById(R.id.chatbot_suggestedReply)
@@ -53,8 +54,6 @@ class Chatbot : Fragment(), View.OnClickListener {
     }
 
     override fun onClick(v: View) {
-        rootView = v.rootView
-
         var textInput: String = getInsertedText(rootView)
         if (textInput == "no input") {
             msgHistory.text = msgHistory.text.toString() + "\nChatbot: How  can I help you?"
