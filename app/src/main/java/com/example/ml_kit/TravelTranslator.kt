@@ -139,7 +139,10 @@ class TravelTranslator : Fragment(), View.OnClickListener  {
     // ============================================================================================
 
     /**
-     * TODO: DOCUMENTATION
+     * languageIdentify
+     *      Input-val: text: String = text to identification
+     *
+     * This method identifies the given text.
      */
     private fun languageIdentify(text: String) {
         languageIdentifier = LanguageIdentification.getClient()
