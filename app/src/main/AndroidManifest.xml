@@ -15,6 +15,7 @@
 
         <!-- optional but recommended:
             download the ML model to the device after your app is installed from the Play Store -->
+        <!-- TextRecognition -->
         <meta-data
             android:name="com.google.mlkit.vision.DEPENDENCIES"
             android:value="ocr" />

@@ -6,7 +6,6 @@ import android.content.Intent
 import android.graphics.Bitmap
 import android.os.Bundle
 import android.provider.MediaStore
-import android.text.method.ScrollingMovementMethod
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -14,6 +13,8 @@ import android.widget.Button
 import android.widget.ImageView
 import android.widget.TextView
 import androidx.fragment.app.Fragment
+import com.google.mlkit.nl.languageid.LanguageIdentification
+import com.google.mlkit.nl.languageid.LanguageIdentifier
 import com.google.mlkit.vision.common.InputImage
 import com.google.mlkit.vision.text.TextRecognition
 import com.google.mlkit.vision.text.TextRecognizer
@@ -34,6 +35,9 @@ class TravelTranslator : Fragment(), View.OnClickListener  {
     // needed for textRecognizer
     private lateinit var imageBitmap: Bitmap
     private lateinit var recognizer: TextRecognizer
+
+    // needed for languageIdentification
+    private lateinit var languageIdentifier: LanguageIdentifier
 
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?,
@@ -120,10 +124,42 @@ class TravelTranslator : Fragment(), View.OnClickListener  {
         recognizer.process(image)
             .addOnSuccessListener { visionText ->
                 textOriginal.text = visionText.text
+
+                languageIdentify(visionText.text)
             }
             .addOnFailureListener { _ ->
                 textOriginal.text = "No text detected"
             }
     }
 
+// ================================================================================================
+// ================================================================================================
+    // ============================================================================================
+    // Identify Languages
+    // ============================================================================================
+
+    /**
+     * TODO: DOCUMENTATION
+     */
+    private fun languageIdentify(text: String) {
+        languageIdentifier = LanguageIdentification.getClient()
+        /*
+         * specify params:
+         *      .setConfidenceThreshold(0.34f)
+         *          this addition can change the threshold value, which can affect the accuracy
+         *          of the result. Default threshold = 0.5
+         */
+
+        languageIdentifier.identifyLanguage(text)
+            .addOnSuccessListener { languageCode ->
+                if (languageCode == "und") {
+                    textOriginal.text =  "${text}\n( Sprache nicht erkannt )"
+                } else {
+                    textOriginal.text =  "${text}\n( $languageCode )"
+                }
+            }
+            .addOnFailureListener { _ ->
+                textOriginal.text =  "${text}\n( Spracherkennung fehlgeschlagen )"
+            }
+    }
 }

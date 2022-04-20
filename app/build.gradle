@@ -59,4 +59,7 @@ dependencies {
 
     // TextRecognition (TR) - this import only provides latin text
     implementation 'com.google.mlkit:text-recognition:16.0.0-beta3'
+
+    // Language Identification (LI)
+    implementation 'com.google.mlkit:language-id:17.0.3'
 }
