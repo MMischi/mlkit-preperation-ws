@@ -14,6 +14,10 @@ import android.widget.Button
 import android.widget.ImageView
 import android.widget.TextView
 import androidx.fragment.app.Fragment
+import com.google.mlkit.vision.common.InputImage
+import com.google.mlkit.vision.text.TextRecognition
+import com.google.mlkit.vision.text.TextRecognizer
+import com.google.mlkit.vision.text.latin.TextRecognizerOptions
 
 
 class TravelTranslator : Fragment(), View.OnClickListener  {
@@ -21,6 +25,7 @@ class TravelTranslator : Fragment(), View.OnClickListener  {
     private lateinit var rootView: View
     private lateinit var takeImgBtn: Button
     private lateinit var textOutput: TextView
+    private lateinit var textOriginal: TextView
     private lateinit var imageView: ImageView
 
     // needed for image
@@ -39,6 +44,7 @@ class TravelTranslator : Fragment(), View.OnClickListener  {
         rootView = view
 
         takeImgBtn = view.findViewById(R.id.travel_createImg)
+        textOriginal = view.findViewById(R.id.travel_originalText)
         textOutput = view.findViewById(R.id.travel_textOutput)
         imageView = view.findViewById(R.id.travel_img)
 
@@ -49,8 +55,6 @@ class TravelTranslator : Fragment(), View.OnClickListener  {
 
     override fun onClick(v: View) {
         dispatchTakePictureIntent()
-
-        textRecognition()
     }
 
     // ============================================================================================
@@ -76,7 +80,50 @@ class TravelTranslator : Fragment(), View.OnClickListener  {
         if (requestCode == REQUEST_IMAGE_CAPTURE && resultCode == RESULT_OK) {
             imageBitmap = data?.extras?.get("data") as Bitmap
             imageView.setImageBitmap(imageBitmap)
+
+            textRecognition()
         }
+    }
+
+// ================================================================================================
+// ================================================================================================
+    // ============================================================================================
+    // Text Recognition
+    // ============================================================================================
+    /**
+     * textRecognition
+     *
+     * This method forms the structure of textRecognition.
+     */
+    private fun textRecognition() {
+        // import recognizer
+        recognizer = TextRecognition.getClient(TextRecognizerOptions.DEFAULT_OPTIONS)
+
+        // create InputImage
+        // You can process the following image types:
+        //      Bitmap, media.Image, ByteBuffer, byte array, or a file on the device
+        //      Code of different types: https://developers.google.com/ml-kit/vision/text-recognition/android#2_prepare_the_input_image
+        // We created a Bitmap Image (see onActivityResult())
+        val image = InputImage.fromBitmap(imageBitmap, 0)
+
+        getTextOfImage(image)
+    }
+
+    /**
+     * getTextOfImage
+     *      Input-val: image:InputImage = contains the image from which the text is to be extracted
+     *
+     * This method attempts to extract text from an image. The extracted text is then displayed
+     * to the user. If no text is found, the user receives a suitable message.
+     */
+    private fun getTextOfImage(image: InputImage) {
+        recognizer.process(image)
+            .addOnSuccessListener { visionText ->
+                textOriginal.text = visionText.text
+            }
+            .addOnFailureListener { _ ->
+                textOriginal.text = "No text detected"
+            }
     }
 
 }
