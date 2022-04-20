@@ -54,6 +54,9 @@ dependencies {
     implementation platform('com.google.firebase:firebase-bom:29.3.1')
     implementation 'com.google.mlkit:smart-reply:17.0.0'
 
-    // EntityExtraction
+    // EntityExtraction (EE)
     implementation 'com.google.mlkit:entity-extraction:16.0.0-beta4'
+
+    // TextRecognition (TR) - this import only provides latin text
+    implementation 'com.google.mlkit:text-recognition:16.0.0-beta3'
 }
