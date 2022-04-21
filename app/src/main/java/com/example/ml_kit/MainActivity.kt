@@ -37,6 +37,7 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
 
     override fun onNavigationItemSelected(item: MenuItem): Boolean {
         drawerLayout.closeDrawer(GravityCompat.START)
+        println(item.itemId)
 
         when(item.itemId) {
             R.id.chatbot -> {
@@ -46,6 +47,10 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
             R.id.traveltranslator -> {
                 setToolbarTitle("TravelTranslator")
                 changeFragment(TravelTranslator())
+            }
+            R.id.emotionidentifier -> {
+                setToolbarTitle("EmotionIdentifier (Live)")
+                changeFragment(EmotionIdentifier())
             }
         }
 
