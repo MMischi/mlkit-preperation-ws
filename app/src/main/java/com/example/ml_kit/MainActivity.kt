@@ -11,6 +11,9 @@ import com.google.android.material.navigation.NavigationView
 import kotlinx.android.synthetic.main.activity_main.*
 import kotlinx.android.synthetic.main.content_main.*
 
+private var currFragment: Fragment = Chatbot()
+private var currTitle: String = "ChatBot"
+
 class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelectedListener {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -31,8 +34,7 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
 
         nav_menu.setNavigationItemSelectedListener(this)
 
-        setToolbarTitle("ChatBot")
-        changeFragment(Chatbot())
+        changCurrFragment(currTitle, currFragment)
     }
 
     override fun onNavigationItemSelected(item: MenuItem): Boolean {
@@ -41,20 +43,30 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
 
         when(item.itemId) {
             R.id.chatbot -> {
-                setToolbarTitle("ChatBot")
-                changeFragment(Chatbot())
+                changCurrFragment("ChatBot", Chatbot())
             }
             R.id.traveltranslator -> {
-                setToolbarTitle("TravelTranslator")
-                changeFragment(TravelTranslator())
+                changCurrFragment("TravelTranslator", TravelTranslator())
             }
             R.id.emotionidentifier -> {
-                setToolbarTitle("EmotionIdentifier (Live)")
-                changeFragment(EmotionIdentifier())
+                changCurrFragment("EmotionIdentifier", EmotionIdentifier())
             }
         }
 
         return true
+    }
+
+    private fun changCurrFragment(title: String, frag: Fragment) {
+        println("now")
+        currTitle = title
+        currFragment = frag
+
+        setFragment(title, frag)
+    }
+
+    private fun setFragment(title: String, frag: Fragment) {
+        setToolbarTitle(title)
+        changeFragment(frag)
     }
 
     private fun setToolbarTitle(title: String) {
