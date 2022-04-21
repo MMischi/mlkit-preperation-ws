@@ -249,5 +249,8 @@ class TravelTranslator : Fragment(), View.OnClickListener  {
             "de" -> TranslateLanguage.GERMAN
             else -> "undefined"
         }
+
+        // list of supported lang:
+        //      https://developers.google.com/ml-kit/language/translation/translation-language-support
     }
 }
