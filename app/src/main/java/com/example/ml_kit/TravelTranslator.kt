@@ -13,8 +13,12 @@ import android.widget.Button
 import android.widget.ImageView
 import android.widget.TextView
 import androidx.fragment.app.Fragment
+import com.google.mlkit.common.model.DownloadConditions
 import com.google.mlkit.nl.languageid.LanguageIdentification
 import com.google.mlkit.nl.languageid.LanguageIdentifier
+import com.google.mlkit.nl.translate.TranslateLanguage
+import com.google.mlkit.nl.translate.Translation
+import com.google.mlkit.nl.translate.TranslatorOptions
 import com.google.mlkit.vision.common.InputImage
 import com.google.mlkit.vision.text.TextRecognition
 import com.google.mlkit.vision.text.TextRecognizer
@@ -30,13 +34,14 @@ class TravelTranslator : Fragment(), View.OnClickListener  {
     private lateinit var imageView: ImageView
 
     // needed for image
-    private var REQUEST_IMAGE_CAPTURE: Int = 1
+    private val REQUEST_IMAGE_CAPTURE: Int = 1
 
     // needed for textRecognizer
     private lateinit var imageBitmap: Bitmap
     private lateinit var recognizer: TextRecognizer
 
     // needed for languageIdentification
+    private lateinit var options: TranslatorOptions
     private lateinit var languageIdentifier: LanguageIdentifier
 
     override fun onCreateView(
@@ -137,7 +142,6 @@ class TravelTranslator : Fragment(), View.OnClickListener  {
     // ============================================================================================
     // Identify Languages
     // ============================================================================================
-
     /**
      * languageIdentify
      *      Input-val: text: String = text to identification
@@ -159,10 +163,91 @@ class TravelTranslator : Fragment(), View.OnClickListener  {
                     textOriginal.text =  "${text}\n( Sprache nicht erkannt )"
                 } else {
                     textOriginal.text =  "${text}\n( $languageCode )"
+                    textTranslator(languageCode, text)
                 }
             }
             .addOnFailureListener { _ ->
                 textOriginal.text =  "${text}\n( Spracherkennung fehlgeschlagen )"
             }
+    }
+
+// ================================================================================================
+// ================================================================================================
+    // ============================================================================================
+    // Translate Text
+    // ============================================================================================
+    /**
+     * textTranslator
+     *      Input-val:  lang:String = Language abbreviation (eg. 'de' for German)
+     *                  text:String = text to translate
+     *
+     * This method forms the structure of textTranslation.
+     */
+    private fun textTranslator(lang: String, text: String) {
+        // language settings
+        val lang: String = getSourceLanguage(lang)
+        if (lang === "undefined") {
+            textOutput.text = "( Language isn't supported )"
+            return
+        }
+
+        // create translator
+        defineTranslator(lang)
+        val langToGerman = Translation.getClient(options)
+
+        // set conditions
+        val conditions = DownloadConditions.Builder()
+            .requireWifi()
+            .build()
+
+        // download model
+        langToGerman.downloadModelIfNeeded(conditions)
+            .addOnSuccessListener { _ ->
+                /* load model successful */
+                // translate text
+                langToGerman.translate(text)
+                    .addOnSuccessListener { translatedText ->
+                        /* translation succeeded */
+                        textOutput.text = "$translatedText\n( de )"
+                    }
+                    .addOnFailureListener { _ ->
+                        /* translation failed */
+                        textOutput.text = "Text konnte nicht übersetzt werden"
+                    }
+            }
+            .addOnFailureListener { _ ->
+                /* load model failed */
+                textOutput.text = "( Übersetzen fehlgeschlagen )"
+            }
+    }
+
+    /**
+     * defineTranslator
+     *      Input-val: lang:String = Language abbreviation (eg. 'de' for German)
+     *
+     * This method defines which language will be translated (sourceLanguage) and which
+     * language will be output (targetLanguage).
+     */
+    private fun defineTranslator(lang: String) {
+        options = TranslatorOptions.Builder()
+            .setSourceLanguage(lang)
+            .setTargetLanguage(TranslateLanguage.ENGLISH)
+            .build()
+    }
+
+    /**
+     * getSourceLanguage - helper function
+     *      Input-val: lang:String = Language abbreviation (eg. 'de' for German)
+     *
+     * In this method the abbreviation of the language is put into the correct form for further
+     * processing (TranslateLanguage object)
+     */
+    private fun getSourceLanguage(lang: String): String {
+        return when(lang) {
+            "el" -> TranslateLanguage.GREEK
+            "en" -> TranslateLanguage.ENGLISH
+            "de" -> TranslateLanguage.GERMAN
+            else -> "undefined"
+        }
     }
 }

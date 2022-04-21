@@ -62,4 +62,7 @@ dependencies {
 
     // Language Identification (LI)
     implementation 'com.google.mlkit:language-id:17.0.3'
+
+    // Translate Text (TT)
+    implementation 'com.google.mlkit:translate:17.0.0'
 }
