@@ -65,4 +65,5 @@ dependencies {
 
     // Translate Text (TT)
     implementation 'com.google.mlkit:translate:17.0.0'
+
 }

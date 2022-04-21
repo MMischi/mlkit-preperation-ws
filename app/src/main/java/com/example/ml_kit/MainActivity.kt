@@ -48,9 +48,6 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
             R.id.traveltranslator -> {
                 changCurrFragment("TravelTranslator", TravelTranslator())
             }
-            R.id.emotionidentifier -> {
-                changCurrFragment("EmotionIdentifier", EmotionIdentifier())
-            }
         }
 
         return true
