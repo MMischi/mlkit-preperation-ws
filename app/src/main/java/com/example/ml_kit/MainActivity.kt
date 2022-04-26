@@ -48,6 +48,9 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
             R.id.traveltranslator -> {
                 changCurrFragment("TravelTranslator", TravelTranslator())
             }
+            R.id.objectdedection -> {
+                changCurrFragment("ObjectDetection", ObjectDetection())
+            }
         }
 
         return true
