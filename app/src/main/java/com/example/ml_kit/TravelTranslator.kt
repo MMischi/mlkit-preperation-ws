@@ -231,7 +231,7 @@ class TravelTranslator : Fragment(), View.OnClickListener  {
     private fun defineTranslator(lang: String) {
         options = TranslatorOptions.Builder()
             .setSourceLanguage(lang)
-            .setTargetLanguage(TranslateLanguage.ENGLISH)
+            .setTargetLanguage(TranslateLanguage.GERMAN)
             .build()
     }
 
