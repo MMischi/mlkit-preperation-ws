@@ -55,6 +55,8 @@ class Chatbot : Fragment(), View.OnClickListener {
 
     override fun onClick(v: View) {
         var textInput: String = getInsertedText(rootView)
+        msgSuggestions.text = ""
+
         if (textInput == "no input") {
             msgHistory.text = msgHistory.text.toString() + "\nChatbot: How  can I help you?"
             return
