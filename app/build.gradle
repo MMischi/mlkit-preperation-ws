@@ -2,8 +2,6 @@ plugins {
     id 'com.android.application'
     id 'org.jetbrains.kotlin.android'
     id 'kotlin-android-extensions'
-
-    id 'com.google.gms.google-services'
 }
 
 android {
@@ -50,8 +48,7 @@ dependencies {
     androidTestImplementation 'androidx.test.ext:junit:1.1.3'
     androidTestImplementation 'androidx.test.espresso:espresso-core:3.4.0'
 
-    // SmartReply (SR) - not working right without firebase
-    implementation platform('com.google.firebase:firebase-bom:29.3.1')
+    // SmartReply (SR)
     implementation 'com.google.mlkit:smart-reply:17.0.0'
 
     // EntityExtraction (EE)
