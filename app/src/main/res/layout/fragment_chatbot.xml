@@ -56,16 +56,6 @@
             android:layout_height="wrap_content"
             android:orientation="horizontal" >
 
-
-            <Button
-                android:layout_width="40dp"
-                android:layout_height="match_parent"
-                app:icon="@drawable/ic_micro"
-
-                style="@style/Widget.MaterialComponents.Button.TextButton"
-
-                android:id="@+id/chatbot_speechEntry" />
-
             <EditText
                 android:id="@+id/chatbot_enterMessage"
                 android:layout_width="wrap_content"
