@@ -5,35 +5,52 @@
     android:layout_height="match_parent"
     tools:context=".ObjectDetection">
 
-    <RelativeLayout
+    <LinearLayout
         android:layout_width="match_parent"
-        android:layout_height="match_parent">
+        android:layout_height="match_parent"
+        android:orientation="vertical" >
 
         <ImageView
             android:layout_width="match_parent"
-            android:layout_height="match_parent" />
+            android:layout_height="400dp"
 
-        <LinearLayout
+            android:layout_margin="10dp"
+            android:layout_weight="1"
+
+            android:id="@+id/objectdedection_img" />
+
+
+        <TextView
             android:layout_width="match_parent"
-            android:layout_height="match_parent"
-            android:orientation="vertical"
+            android:layout_height="wrap_content"
 
-            android:background="@color/black"
-            android:padding="30dp"
+            android:text="Take a picture to translate the text on it"
+            android:textSize="20sp"
+            android:gravity="center"
+            android:textAlignment="center"
 
-            android:gravity="bottom" >
+            android:layout_marginTop="5dp"
+            android:layout_marginBottom="10dp"
+            android:layout_marginStart="10dp"
+            android:layout_marginEnd="10dp"
+            android:layout_weight="1"
 
-            <TextView
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
+            android:textColor="@color/black"
+            android:id="@+id/objectdedection_textOutput" />
 
-                android:background="@color/white"
-                android:padding="20dp"
 
-                android:textColor="@color/black"
-                android:text="Nothing detected" />
-        </LinearLayout>
+        <Button
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
 
-    </RelativeLayout>
+            android:layout_margin="10dp"
+            android:layout_weight="0"
+
+            android:background="@color/design_default_color_primary"
+            android:text="take picture"
+
+            android:id="@+id/objectdedection_createImg" />
+
+    </LinearLayout>
 
 </LinearLayout>
