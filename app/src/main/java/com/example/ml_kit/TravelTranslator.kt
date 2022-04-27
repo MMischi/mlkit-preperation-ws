@@ -41,7 +41,7 @@ class TravelTranslator : Fragment(), View.OnClickListener  {
     private lateinit var recognizer: TextRecognizer
 
     // needed for languageIdentification
-    private lateinit var options: TranslatorOptions
+    private lateinit var langOptions: TranslatorOptions
     private lateinit var languageIdentifier: LanguageIdentifier
 
     override fun onCreateView(
@@ -193,7 +193,7 @@ class TravelTranslator : Fragment(), View.OnClickListener  {
 
         // create translator
         defineTranslator(lang)
-        val langToGerman = Translation.getClient(options)
+        val langToGerman = Translation.getClient(langOptions)
 
         // set conditions
         val conditions = DownloadConditions.Builder()
@@ -229,7 +229,7 @@ class TravelTranslator : Fragment(), View.OnClickListener  {
      * language will be output (targetLanguage).
      */
     private fun defineTranslator(lang: String) {
-        options = TranslatorOptions.Builder()
+        langOptions = TranslatorOptions.Builder()
             .setSourceLanguage(lang)
             .setTargetLanguage(TranslateLanguage.GERMAN)
             .build()
