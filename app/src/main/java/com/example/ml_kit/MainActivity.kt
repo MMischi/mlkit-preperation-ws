@@ -51,6 +51,9 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
             R.id.objectdedection -> {
                 changCurrFragment("ObjectDetection", ObjectDetection())
             }
+            R.id.whichplant -> {
+                changCurrFragment("Which plant is this?", WhichPlant())
+            }
         }
 
         return true
