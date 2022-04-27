@@ -63,4 +63,7 @@ dependencies {
     // Translate Text (TT)
     implementation 'com.google.mlkit:translate:17.0.0'
 
+    // Object Detection (OD)
+    implementation 'com.google.mlkit:object-detection:17.0.0'
+
 }
