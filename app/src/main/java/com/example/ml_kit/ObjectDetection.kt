@@ -28,7 +28,6 @@ class ObjectDetection : Fragment(), View.OnClickListener {
     private lateinit var outputSting: TextView
 
     // needed for objectDetection
-    private lateinit var objectDetector: ObjectDetector
     private lateinit var objOptions: ObjectDetectorOptions
 
     // needed for image
