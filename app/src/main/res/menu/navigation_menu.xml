@@ -10,9 +10,9 @@
 
     <item
         android:id="@+id/objectdedection"
-        android:title="ObjectDetection" />
+        android:title="What is this? (basic model)" />
 
     <item
         android:id="@+id/whichplant"
-        android:title="Which plant is this?" />
+        android:title="Which plant is this? (tf model)" />
 </menu>
