@@ -143,7 +143,7 @@ class ThisIsMe : Fragment() {
     /**
      * imageAnalysis
      *
-     * TODO
+     * ImageAnalysis gives us the possibility to edit each frame individually.
      */
     private fun imageAnalysis() {
         imageAnalysis = ImageAnalysis.Builder()
