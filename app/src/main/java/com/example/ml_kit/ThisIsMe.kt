@@ -1,6 +1,7 @@
 package com.example.ml_kit
 
 import android.Manifest
+import android.annotation.SuppressLint
 import android.app.Activity
 import android.content.pm.PackageManager
 import android.os.Bundle
@@ -18,8 +19,12 @@ import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.LifecycleOwner
+import com.google.mlkit.vision.common.InputImage
+import com.google.mlkit.vision.face.FaceDetection
+import com.google.mlkit.vision.face.FaceDetectorOptions
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
+
 
 class ThisIsMe : Fragment() {
 
@@ -31,8 +36,8 @@ class ThisIsMe : Fragment() {
 
     // cameraX
     private lateinit var preview: Preview
-    private lateinit var cameraSelector: CameraSelector
     private lateinit var imageAnalysis: ImageAnalysis
+    private lateinit var cameraSelector: CameraSelector
     private var executor: ExecutorService = Executors.newSingleThreadExecutor()
 
 
@@ -43,7 +48,6 @@ class ThisIsMe : Fragment() {
     ): View? {
         // Inflate the layout for this fragment
         rootView = inflater.inflate(R.layout.fragment_this_is_me, container, false)
-
         context = this.requireActivity()
 
         if (allPermissionsGranted()) {
@@ -156,9 +160,6 @@ class ThisIsMe : Fragment() {
 
             // start face detection api
             faceDetection(imageProxy)
-
-            // after done, release the ImageProxy object
-            imageProxy.close()
         })
 
     }
@@ -170,6 +171,31 @@ class ThisIsMe : Fragment() {
     // ============================================================================================
 
     private fun faceDetection(imageProxy: ImageProxy) {
-        // TODO: Face Detection
+        // Real-time contour detection
+        val realTimeOpts = FaceDetectorOptions.Builder()
+            .setContourMode(FaceDetectorOptions.CONTOUR_MODE_ALL)
+            .build()
+
+        @SuppressLint("UnsafeOptInUsageError")
+        val mediaImage = imageProxy.image
+        if (mediaImage !== null) {
+            val image = InputImage.fromMediaImage(mediaImage, imageProxy.imageInfo.rotationDegrees)
+
+            val detector = FaceDetection.getClient(realTimeOpts)
+
+            detector.process(image)
+                .addOnSuccessListener { faces ->
+                    for (face in faces) {
+                        // code
+                    }
+                }
+                .addOnFailureListener { _ ->
+                    // Task failed with an exception
+                    // ...
+                }
+
+            // after done, release the ImageProxy object
+            imageProxy.close()
+        }
     }
 }
