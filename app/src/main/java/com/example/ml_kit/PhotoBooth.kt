@@ -55,7 +55,7 @@ class PhotoBooth : Fragment(), View.OnClickListener {
         savedInstanceState: Bundle?
     ): View? {
         // Inflate the layout for this fragment
-        rootView = inflater.inflate(R.layout.fragment_this_is_me, container, false)
+        rootView = inflater.inflate(R.layout.fragment_photo_booth, container, false)
         context = this.requireActivity()
 
         var glassesBtn: Button = rootView.findViewById(R.id.me_glassesBtn)
