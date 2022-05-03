@@ -6,14 +6,13 @@ import android.app.Activity
 import android.content.pm.PackageManager
 import android.graphics.*
 import android.graphics.drawable.BitmapDrawable
-import android.graphics.drawable.ShapeDrawable
-import android.graphics.drawable.shapes.RectShape
 import android.os.Bundle
+import android.util.Size
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.widget.Button
 import android.widget.ImageView
-import android.widget.TextView
 import android.widget.Toast
 import androidx.camera.core.CameraSelector
 import androidx.camera.core.ImageAnalysis
@@ -27,16 +26,13 @@ import androidx.fragment.app.Fragment
 import androidx.lifecycle.LifecycleOwner
 import com.google.mlkit.vision.common.InputImage
 import com.google.mlkit.vision.face.Face
-import com.google.mlkit.vision.face.FaceContour
 import com.google.mlkit.vision.face.FaceDetection
 import com.google.mlkit.vision.face.FaceDetectorOptions
-import com.google.mlkit.vision.face.FaceDetectorOptions.CLASSIFICATION_MODE_ALL
-import org.w3c.dom.Text
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
 
 
-class ThisIsMe : Fragment() {
+class ThisIsMe : Fragment(), View.OnClickListener {
 
     private lateinit var rootView: View
     private lateinit var context: Activity
@@ -45,12 +41,14 @@ class ThisIsMe : Fragment() {
     private var REQUIRED_PERMISSIONS = arrayOf(Manifest.permission.CAMERA)
 
     // cameraX
+    private lateinit var cameraProvider: ProcessCameraProvider
     private lateinit var preview: Preview
     private lateinit var imageAnalysis: ImageAnalysis
     private lateinit var cameraSelector: CameraSelector
     private var executor: ExecutorService = Executors.newSingleThreadExecutor()
 
-
+    // Face Properties
+    private lateinit var currFace: Face
 
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?,
@@ -59,6 +57,15 @@ class ThisIsMe : Fragment() {
         // Inflate the layout for this fragment
         rootView = inflater.inflate(R.layout.fragment_this_is_me, container, false)
         context = this.requireActivity()
+
+        var glassesBtn: Button = rootView.findViewById(R.id.me_glassesBtn)
+        glassesBtn.setOnClickListener(this)
+
+        return rootView
+    }
+
+    override fun onStart() {
+        super.onStart()
 
         if (allPermissionsGranted()) {
             startCamera()
@@ -69,8 +76,22 @@ class ThisIsMe : Fragment() {
                 REQUEST_CODE_PERMISSIONS
             )
         }
+    }
 
-        return rootView
+    override fun onPause() {
+        super.onPause()
+        cameraProvider.unbindAll();
+    }
+
+    override fun onClick(v: View) {
+        var glassesImg: ImageView = rootView.findViewById(R.id.me_glassesImg)
+        if (glassesImg.visibility == View.VISIBLE) {
+            glassesImg.visibility = View.INVISIBLE
+            return
+        }
+
+        glassesImg.visibility = View.VISIBLE
+        placeGlasses()
     }
 
 // ================================================================================================
@@ -125,7 +146,7 @@ class ThisIsMe : Fragment() {
         val cameraProviderFuture = ProcessCameraProvider.getInstance(context)
         cameraProviderFuture.addListener({
 
-            val cameraProvider = cameraProviderFuture.get()
+            cameraProvider = cameraProviderFuture.get()
             bindPreview()
             imageAnalysis()
 
@@ -160,8 +181,11 @@ class ThisIsMe : Fragment() {
      * ImageAnalysis gives us the possibility to edit each frame individually.
      */
     private fun imageAnalysis() {
+        var pView: PreviewView = rootView.findViewById(R.id.me_preview)
+
         imageAnalysis = ImageAnalysis.Builder()
             .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
+            .setTargetResolution(Size(pView.width, pView.height))
             .build()
 
         imageAnalysis.setAnalyzer(executor, ImageAnalysis.Analyzer { imageProxy ->
@@ -176,7 +200,12 @@ class ThisIsMe : Fragment() {
     // ============================================================================================
     // Face Detection
     // ============================================================================================
-
+    /**
+     * faceDetection
+     *      Input-val: imageProxy: ImageProxy = frame
+     *
+     * This method forms the structure of Face Detection.
+     */
     private fun faceDetection(imageProxy: ImageProxy) {
         // set detector options
         val realTimeOpts = FaceDetectorOptions.Builder()
@@ -184,10 +213,11 @@ class ThisIsMe : Fragment() {
             .build()
 
         @SuppressLint("UnsafeOptInUsageError")
-        val mediaImage = imageProxy.image
+        val mediaImage = imageProxy.image   // create image media
         if (mediaImage !== null) {
             // prepare image
-            val image = InputImage.fromMediaImage(mediaImage, imageProxy.imageInfo.rotationDegrees)
+            val image =
+                InputImage.fromMediaImage(mediaImage, imageProxy.imageInfo.rotationDegrees)
 
             // create instance of face detector
             val detector = FaceDetection.getClient(realTimeOpts)
@@ -198,8 +228,11 @@ class ThisIsMe : Fragment() {
                     /* task success */
                     if (faces.isNotEmpty()) {
                         for (face in faces) {
-                            outlineFaceRect(face)
-                            outlineFacePoly(face)
+                            currFace = face     // save current face information
+
+                            outlineFaceRect()
+                            outlineFacePoly()
+                            placeGlasses()
                         }
                     }
                 }
@@ -212,26 +245,40 @@ class ThisIsMe : Fragment() {
         }
     }
 
-    private fun outlineFacePoly(face: Face) {
-        var contourPoints = face.getContour(1)!!.points
+    /**
+     * outlineFacePoly
+     *
+     * Outlines face contour.
+     */
+    private fun outlineFacePoly() {
+        var contourPoints = currFace.getContour(1)!!.points
 
         val imageV: ImageView = rootView.findViewById(R.id.me_imageVPoint)
-        val bitmap: Bitmap = Bitmap.createBitmap(imageV.width, imageV.height, Bitmap.Config.ARGB_8888)
+        val bitmap: Bitmap =
+            Bitmap.createBitmap(imageV.width, imageV.height, Bitmap.Config.ARGB_8888)
         val canvas: Canvas = Canvas(bitmap)
+
+        val face_xcenter = currFace.boundingBox.centerX() * 0.5
+        val face_ycenter = currFace.boundingBox.centerY() * 0.5
 
         val paint = Paint()
         paint.alpha = 0xA0                      // the transparency
-        paint.color = Color.YELLOW              // color is red
+        paint.color = Color.BLUE                // color is red
         paint.style = Paint.Style.STROKE        // stroke or fill or ...
         paint.strokeWidth = 10F                 // the stroke width
 
         // create Polygon
         var pol: Path = Path()
-        pol.moveTo(contourPoints[0].x, contourPoints[0].y)
+        pol.moveTo(
+            (contourPoints[0].x + face_xcenter.toFloat()),
+            (contourPoints[0].y + face_ycenter.toFloat())
+        )
         contourPoints.drop(0)   // already done
         for(contourPoint in contourPoints) {
-            println(contourPoint)
-            pol.lineTo(contourPoint.x, contourPoint.y)
+            pol.lineTo(
+                (contourPoint.x + face_xcenter.toFloat()),
+                (contourPoint.y + face_ycenter.toFloat())
+            )
         }
 
         // draw Polygon
@@ -241,9 +288,15 @@ class ThisIsMe : Fragment() {
         imageV.background = BitmapDrawable(resources, bitmap)
     }
 
-    private fun outlineFaceRect(face: Face) {
+    /**
+     * outlineFacePoly
+     *
+     * Outlines face with rectangle.
+     */
+    private fun outlineFaceRect() {
         val imageV: ImageView = rootView.findViewById(R.id.me_imageV)
-        val bitmap: Bitmap = Bitmap.createBitmap(imageV.width, imageV.height, Bitmap.Config.ARGB_8888)
+        val bitmap: Bitmap =
+            Bitmap.createBitmap(imageV.width, imageV.height, Bitmap.Config.ARGB_8888)
         val canvas: Canvas = Canvas(bitmap)
 
         val paint = Paint()
@@ -252,29 +305,59 @@ class ThisIsMe : Fragment() {
         paint.style = Paint.Style.STROKE        // stroke or fill or ...
         paint.strokeWidth = 10F                 // the stroke width
 
-        val preview_xcenter = imageV.width / 2F
-        val preview_ycenter = imageV.height / 2F
-
-        val face_xcenter = face.boundingBox.centerX() / 2F
-        val face_ycenter = face.boundingBox.centerY() / 2F
-
-        val xcenter = preview_xcenter - face_xcenter
-        val ycenter = preview_ycenter - face_ycenter
+        val face_xcenter = currFace.boundingBox.centerX() * 0.5
+        val face_ycenter = currFace.boundingBox.centerY() * 0.5
 
         // Calculate positions.
-        val left = xcenter - face.boundingBox.width()
-        val top = ycenter + face.boundingBox.height()
-        val right = xcenter + face.boundingBox.width()
-        val bottom = ycenter - face.boundingBox.height()
+        val left = currFace.boundingBox.left + face_xcenter
+        val top = currFace.boundingBox.top + face_ycenter
+        val right = currFace.boundingBox.right + face_xcenter
+        val bottom = currFace.boundingBox.bottom + face_ycenter
 
 
         val rec: Rect = Rect(left.toInt(), top.toInt(), right.toInt(), bottom.toInt())
-        val rec2: Rect = Rect(face.boundingBox.left, face.boundingBox.top, face.boundingBox.right, face.boundingBox.bottom)
+        val rec2: Rect = Rect(
+            currFace.boundingBox.left,
+            currFace.boundingBox.bottom,
+            currFace.boundingBox.right,
+            currFace.boundingBox.top
+        )
 
         // draw Rect
         canvas.drawRect(rec, paint)
 
         // set bitmap as background to ImageView
         imageV.background = BitmapDrawable(resources, bitmap)
+    }
+
+    /**
+     * placeGlasses
+     *
+     * Something creative ;D Shows glasses placed over the eyes.
+     */
+    private fun placeGlasses() {
+        var glassesImg: ImageView = rootView.findViewById(R.id.me_glassesImg)
+        if (!this::currFace.isInitialized) {
+            Toast.makeText(
+                context,
+                "No face detected yet!",
+                Toast.LENGTH_SHORT
+            ).show()
+        } else {
+            // size image view
+            glassesImg.layoutParams.width = currFace.boundingBox.width()
+            glassesImg.requestLayout()
+
+            val eyeContour = currFace.getContour(6)!!.points
+
+            // calculate position
+            val face_xcenter = currFace.boundingBox.centerX() * 0.5
+            val left = currFace.boundingBox.left + face_xcenter
+            val top = eyeContour[0].y + (glassesImg.height * 0.25)
+
+            // place image view
+            glassesImg.x = left.toFloat()
+            glassesImg.y = top.toFloat()
+        }
     }
 }
