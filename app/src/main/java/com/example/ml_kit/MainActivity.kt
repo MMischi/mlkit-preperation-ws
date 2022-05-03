@@ -54,8 +54,8 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
             R.id.whichplant -> {
                 changCurrFragment("Which plant is this?", WhichPlant())
             }
-            R.id.me -> {
-                changCurrFragment("This is me!", ThisIsMe())
+            R.id.photoBooth -> {
+                changCurrFragment("Photo Booth", PhotoBooth())
             }
         }
 

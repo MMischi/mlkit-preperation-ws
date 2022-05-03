@@ -17,6 +17,6 @@
         android:title="Which plant is this? (tf model)" />
 
     <item
-        android:id="@+id/me"
-        android:title="This is me!" />
+        android:id="@+id/photoBooth"
+        android:title="Photo Booth" />
 </menu>

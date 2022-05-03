@@ -32,7 +32,7 @@ import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
 
 
-class ThisIsMe : Fragment(), View.OnClickListener {
+class PhotoBooth : Fragment(), View.OnClickListener {
 
     private lateinit var rootView: View
     private lateinit var context: Activity
