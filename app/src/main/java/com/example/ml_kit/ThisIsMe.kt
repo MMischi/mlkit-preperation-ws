@@ -27,8 +27,10 @@ import androidx.fragment.app.Fragment
 import androidx.lifecycle.LifecycleOwner
 import com.google.mlkit.vision.common.InputImage
 import com.google.mlkit.vision.face.Face
+import com.google.mlkit.vision.face.FaceContour
 import com.google.mlkit.vision.face.FaceDetection
 import com.google.mlkit.vision.face.FaceDetectorOptions
+import com.google.mlkit.vision.face.FaceDetectorOptions.CLASSIFICATION_MODE_ALL
 import org.w3c.dom.Text
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
@@ -148,9 +150,7 @@ class ThisIsMe : Fragment() {
             .build()
 
         var previewView: PreviewView = rootView.findViewById(R.id.me_preview)
-
         previewView.scaleType = PreviewView.ScaleType.FIT_CENTER
-
         preview.setSurfaceProvider(previewView.surfaceProvider)
     }
 
@@ -161,13 +161,10 @@ class ThisIsMe : Fragment() {
      */
     private fun imageAnalysis() {
         imageAnalysis = ImageAnalysis.Builder()
-            // enable the following line if RGBA output is needed.
-            // .setOutputImageFormat(ImageAnalysis.OUTPUT_IMAGE_FORMAT_RGBA_8888)
             .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
             .build()
 
         imageAnalysis.setAnalyzer(executor, ImageAnalysis.Analyzer { imageProxy ->
-
             // start face detection api
             faceDetection(imageProxy)
         })
@@ -181,7 +178,7 @@ class ThisIsMe : Fragment() {
     // ============================================================================================
 
     private fun faceDetection(imageProxy: ImageProxy) {
-        // Real-time contour detection
+        // set detector options
         val realTimeOpts = FaceDetectorOptions.Builder()
             .setContourMode(FaceDetectorOptions.CONTOUR_MODE_ALL)
             .build()
@@ -189,20 +186,25 @@ class ThisIsMe : Fragment() {
         @SuppressLint("UnsafeOptInUsageError")
         val mediaImage = imageProxy.image
         if (mediaImage !== null) {
+            // prepare image
             val image = InputImage.fromMediaImage(mediaImage, imageProxy.imageInfo.rotationDegrees)
-            val commentbox: TextView = rootView.findViewById(R.id.me_commentbox)
 
+            // create instance of face detector
             val detector = FaceDetection.getClient(realTimeOpts)
 
+            // process image
             detector.process(image)
                 .addOnSuccessListener { faces ->
-                    for (face in faces) {
-                        outlineFace(face, imageProxy)
-                        commentbox.text = "yess"
+                    /* task success */
+                    if (faces.isNotEmpty()) {
+                        for (face in faces) {
+                            outlineFaceRect(face)
+                            outlineFacePoly(face)
+                        }
                     }
                 }
                 .addOnFailureListener { _ ->
-
+                    /* task failed */
                 }
 
             // after done, release the ImageProxy object
@@ -210,7 +212,36 @@ class ThisIsMe : Fragment() {
         }
     }
 
-    private fun outlineFace(face: Face, imageProxy: ImageProxy) {
+    private fun outlineFacePoly(face: Face) {
+        var contourPoints = face.getContour(1)!!.points
+
+        val imageV: ImageView = rootView.findViewById(R.id.me_imageVPoint)
+        val bitmap: Bitmap = Bitmap.createBitmap(imageV.width, imageV.height, Bitmap.Config.ARGB_8888)
+        val canvas: Canvas = Canvas(bitmap)
+
+        val paint = Paint()
+        paint.alpha = 0xA0                      // the transparency
+        paint.color = Color.YELLOW              // color is red
+        paint.style = Paint.Style.STROKE        // stroke or fill or ...
+        paint.strokeWidth = 10F                 // the stroke width
+
+        // create Polygon
+        var pol: Path = Path()
+        pol.moveTo(contourPoints[0].x, contourPoints[0].y)
+        contourPoints.drop(0)   // already done
+        for(contourPoint in contourPoints) {
+            println(contourPoint)
+            pol.lineTo(contourPoint.x, contourPoint.y)
+        }
+
+        // draw Polygon
+        canvas.drawPath(pol, paint)
+
+        // set bitmap as background to ImageView
+        imageV.background = BitmapDrawable(resources, bitmap)
+    }
+
+    private fun outlineFaceRect(face: Face) {
         val imageV: ImageView = rootView.findViewById(R.id.me_imageV)
         val bitmap: Bitmap = Bitmap.createBitmap(imageV.width, imageV.height, Bitmap.Config.ARGB_8888)
         val canvas: Canvas = Canvas(bitmap)
@@ -224,11 +255,11 @@ class ThisIsMe : Fragment() {
         val preview_xcenter = imageV.width / 2F
         val preview_ycenter = imageV.height / 2F
 
-        val face_xcenter = face.boundingBox.centerX()
-        val face_ycenter = face.boundingBox.centerY()
+        val face_xcenter = face.boundingBox.centerX() / 2F
+        val face_ycenter = face.boundingBox.centerY() / 2F
 
-        val xcenter = preview_xcenter - face_xcenter + face.boundingBox.width()
-        val ycenter = preview_ycenter - face_ycenter + face.boundingBox.height()
+        val xcenter = preview_xcenter - face_xcenter
+        val ycenter = preview_ycenter - face_ycenter
 
         // Calculate positions.
         val left = xcenter - face.boundingBox.width()
@@ -238,6 +269,7 @@ class ThisIsMe : Fragment() {
 
 
         val rec: Rect = Rect(left.toInt(), top.toInt(), right.toInt(), bottom.toInt())
+        val rec2: Rect = Rect(face.boundingBox.left, face.boundingBox.top, face.boundingBox.right, face.boundingBox.bottom)
 
         // draw Rect
         canvas.drawRect(rec, paint)
